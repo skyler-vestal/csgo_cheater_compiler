@@ -6,19 +6,19 @@ DATA_PATH = "./data/players/*.html"
 
 # Main function for compiling data and generating database
 def main():
-    # Dictionary for player names -> player data (could be list -- not sure)
     player_col = {}
     for file_name in glob(DATA_PATH):
-        gen_player(file_name)
-        # player = gen_player(file_name)
-        # player_col[player.name] = player
+        player = gen_player(file_name)
+        # TODO: Deal with duplicate names
+        # Steamids instead? ID -> Name and ID -> Player Data
+        player_col[player.name] = player
 
 
 # Generates and returns a single player object from a file
 def gen_player(file_name):
     player_name = get_player_name(file_name)
     match_list = get_match_list(file_name)
-    #return Player(player_name, match_list)
+    return Player(player_name, match_list)
 
 
 # Parse file for main name of player at top of file
@@ -90,11 +90,11 @@ class Match:
             record = Match.__make_record__(row)
             # Add record to team 1
             self.teams[1][record["name"]] = record
-        score_str = match_rows[6].text.strip().split(":")
-        self.scores = (int(scores_str[0]), int(scores_str[1]))
+        score_list = match_rows[6].text.strip().split(":")
+        self.scores = (int(score_list[0]), int(score_list[1]))
         
 
-
+    # Really big ugly method for compiling data from a game into useable data
     @staticmethod
     def __make_record__(record_data):
         record = {}
@@ -117,14 +117,12 @@ class Match:
         # Seems like if stats > 0 then they're blank. Let's fill them in w/ 0s
         for stat in record:
             record[stat] = 0 if not len(record[stat]) else int(record[stat])
-        print(record)
 
         record["name"] = stats_rows[0].text.strip()
         
         # Since these will also be blank but we're indexing we need to do another
         # check
         mvps = stats_rows[5].text.strip()
-        print(mvps)
         record["mvps"] = int(mvps[1:]) if len(mvps) > 1 else 0
         hsp = stats_rows[6].text.strip()
         record["hsp"] = int(hsp[:hsp.index("%")]) if len(hsp) > 1 else 0
@@ -146,15 +144,18 @@ class Match:
 
 
 # Class for a player -- collection of player, summary stats, and individual matches
+# name - string of the name of the player of focus
+# match_list - a string of match objects
+# ...
 class Player:
     
     def __init__(self, name, match_list):
         self.name = name
         self.match_list = match_list
-        sum_stats()
+        self.sum_stats()
 
 
-    def sum_stats():
+    def sum_stats(self):
         return 0
 
 
