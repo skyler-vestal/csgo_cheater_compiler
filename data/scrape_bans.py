@@ -55,10 +55,15 @@ def get_match_list(file_name):
 
 
 # Class for a single match data -- just a container but makes it easier to hold
+# Useful stuff:
+#   map_data - Dictionary for map, date, time, wait_time, and match_time
+#   teams - Tuple of 2 dictionaries for two teams
+#   scores - Tuple of 2 ints for two teams
 class Match:
 
     def __init__(self, map_data, match_data):
         self.map_data = {}
+        self.match_data = {}
         self.parse_map_data(map_data)
         self.parse_match_data(match_data)
 
@@ -76,7 +81,7 @@ class Match:
     
     def parse_match_data(self, match_data):
         match_rows = match_data.find("tbody").find_all("tr")
-        self.teams = [{}, {}]
+        self.teams = ({}, {})
         for row in match_rows[1:5]:
             record = Match.__make_record__(row)
             # Add record to team 1
@@ -86,7 +91,7 @@ class Match:
             # Add record to team 1
             self.teams[1][record["name"]] = record
         score_str = match_rows[6].text.strip().split(":")
-        self.scores = int(scores_str[0], scores_str[1])
+        self.scores = (int(scores_str[0]), int(scores_str[1]))
         
 
 
