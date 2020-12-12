@@ -162,14 +162,21 @@ class Match:
         record["hsp"] = int(hsp[:hsp.index("%")]) if len(hsp) > 1 else 0
         
         # Get a ban message -- set default of being banned after game to false
-        record["ban_msg"] = stats_rows[8].text.strip()
-        ban_attr = stats_rows[8].attrs
         record["banned"] = False
-        record["banned_after"] = False
 
         # If the player has been banned (weird way ik)
+        ban_attr = stats_rows[8].attrs
         if "style" in ban_attr:
             record["banned"] = True
+
+            # Handle string ban message stuff
+            ban_txt = stats_rows[8].text.strip()
+            # Both, VAC, or Game ban
+            record["ban_type"] = "Both" if '&' in ban_txt else ban_txt[:index("-")]
+            # Regardless of format the number of days is through this
+            # (Thanks Valve for saving me from a headache)
+            record["ban_days"] = int(ban_txt[index("-") + 1:])
+            
             style = ban_attr["style"].strip()
             # If the color in the browser of the ban is red they were banned after
             # the game
@@ -192,12 +199,28 @@ class Player:
         # but I'm just getting this up and running
         self.steam_id = steam_id
 
-        self.__sum_stats__()
 
-
-    def __sum_stats__(self):
+    def sum_stats(self):
         return 0
 
 
+    def __handle_bans__(self):
+        # First let's collect all ban matches
+        self.ban_stats = {}
+        self.__ban_refs__ = []
+        for match in self.match_list:
+            if match.cheaters > 0:
+                self.__ban_refs__.append(match)
+
+        total_vac = 0
+        total_game = 0
+        total_p_vac = 0
+        total_p_game = 0
+        total_shared = 0
+        total_p_shared = 0
+
+        # Well ... this will be trickier than thought
+        # for match in self.__ban_refs__:
+        #     cheats = match.cheaters
 
 main()
