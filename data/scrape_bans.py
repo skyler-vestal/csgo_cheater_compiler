@@ -6,29 +6,47 @@ DATA_PATH = "./data/players/*.html"
 
 # Main function for compiling data and generating database
 def main():
+    # player_col - dictionary of steam id -> player object (with matches n stuff)
+    # id_name_map - dictionary of steam id -> player name (to solve duplicate names)
     player_col = {}
+    id_name_map = {}
     for file_name in glob(DATA_PATH):
         player = gen_player(file_name)
-        # TODO: Deal with duplicate names
-        # Steamids instead? ID -> Name and ID -> Player Data
-        player_col[player.name] = player
+        player_col[player.steam_id] = player
+        # I think I'll need this later for the sake of people wanting to access
+        # their data. Not using it right now
+        id_name_map[player.steam_id] = player.name
 
 
 # Generates and returns a single player object from a file
 def gen_player(file_name):
-    player_name = get_player_name(file_name)
+    player_id, player_name = get_player_info(file_name)
     match_list = get_match_list(file_name)
-    return Player(player_name, match_list)
+    return Player(player_id, player_name, match_list)
 
 
 # Parse file for main name of player at top of file
-def get_player_name(file_name):
+def get_player_info(file_name):
     # Parse only tag w/ white name at top of page
     with open(file_name, "r") as file:
         soup = bs(file, 'html5lib')
+        # Parse ID first
+        # TODO: Yes this steam id parsing is ... really hacky. I'm looking for a better way to do it
+        # The only other reliable method I've thought of is matching the user's name
+        # with their steamid from their first match -- but then you have to pass into
+        # the name into the match which breaks the whole concept of the class
+        # Just messy all around. I could ask people to submit their id but I don't
+        # trust people enough to do this T_T
+        # Look everyone makes faults and gets lazy aight
+        raw_id = soup.find_all("script", {"type" : "text/javascript"})[-1].text
+        tag = "g_steamID = \""
+        raw_id = raw_id[raw_id.index(tag) + len(tag):]
+        steam_id = int(raw_id[:raw_id.index("\"")])
+
+        # Then get the name
         name = soup.find("a", {"class" : "whiteLink persona_name_text_content"})
         # Strip tabbing(?) stuff off name
-        return name.text.strip()
+        return steam_id, name.text.strip()
 
 
 # Parses a file and returns a list of match objects
@@ -66,6 +84,15 @@ class Match:
         self.match_data = {}
         self.parse_map_data(map_data)
         self.parse_match_data(match_data)
+    
+
+    # Return the team index 
+    def get_team(self, player):
+        for num in range(2):
+            if player in self.teams[num]:
+                return num
+        raise ValueError("Player not in either team")
+        
 
 
     # Initialize variables for map data
@@ -82,16 +109,23 @@ class Match:
     def parse_match_data(self, match_data):
         match_rows = match_data.find("tbody").find_all("tr")
         self.teams = ({}, {})
-        for row in match_rows[1:5]:
-            record = Match.__make_record__(row)
-            # Add record to team 1
-            self.teams[0][record["name"]] = record
-        for row in match_rows[7:11]:
-            record = Match.__make_record__(row)
-            # Add record to team 1
-            self.teams[1][record["name"]] = record
+        self.cheaters = 0
+        self.cheaters_after = 0
+        self.__fill_teams__(0, match_rows[1:5])
+        self.__fill_teams__(1, match_rows[7:11])
         score_list = match_rows[6].text.strip().split(":")
         self.scores = (int(score_list[0]), int(score_list[1]))
+
+
+    # Fill in team dictionary with all players on that team
+    def __fill_teams__(self, index, records):
+        for row in records:
+            record = Match.__make_record__(row)
+            # Add record to team 1 using steamid
+            if record["banned"]:
+                self.cheaters += 1
+                self.cheaters_after += 1 if record["banned_after"] else 0
+            self.teams[index][record["steam_id"]] = record
         
 
     # Really big ugly method for compiling data from a game into useable data
@@ -149,14 +183,21 @@ class Match:
 # ...
 class Player:
     
-    def __init__(self, name, match_list):
+    def __init__(self, steam_id, name, match_list):
         self.name = name
         self.match_list = match_list
-        self.sum_stats()
+        # TODO: GACKY -- This is kind of awkward as I designed this around keys
+        # to accessing the player dictionary around names
+        # However -- the steamid makes way more sense. Should be an easy change
+        # but I'm just getting this up and running
+        self.steam_id = steam_id
+
+        self.__sum_stats__()
 
 
-    def sum_stats(self):
+    def __sum_stats__(self):
         return 0
+
 
 
 main()
