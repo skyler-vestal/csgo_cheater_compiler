@@ -172,10 +172,11 @@ class Match:
             # Handle string ban message stuff
             ban_txt = stats_rows[8].text.strip()
             # Both, VAC, or Game ban
-            record["ban_type"] = "Both" if '&' in ban_txt else ban_txt[:index("-")]
+            sep = "+" if "+" in ban_txt else "-"
+            record["ban_type"] = "Both" if '&' in ban_txt else ban_txt[:ban_txt.index(sep)]
             # Regardless of format the number of days is through this
             # (Thanks Valve for saving me from a headache)
-            record["ban_days"] = int(ban_txt[index("-") + 1:])
+            record["ban_days"] = int(ban_txt[ban_txt.index(sep) + 1:])
             
             style = ban_attr["style"].strip()
             # If the color in the browser of the ban is red they were banned after
@@ -198,9 +199,11 @@ class Player:
         # However -- the steamid makes way more sense. Should be an easy change
         # but I'm just getting this up and running
         self.steam_id = steam_id
+        self.sum_stats()
 
 
     def sum_stats(self):
+        self.__handle_bans__()
         return 0
 
 
@@ -211,13 +214,6 @@ class Player:
         for match in self.match_list:
             if match.cheaters > 0:
                 self.__ban_refs__.append(match)
-
-        total_vac = 0
-        total_game = 0
-        total_p_vac = 0
-        total_p_game = 0
-        total_shared = 0
-        total_p_shared = 0
 
         # Well ... this will be trickier than thought
         # for match in self.__ban_refs__:
