@@ -84,16 +84,24 @@ class Match:
         self.match_data = {}
         self.parse_map_data(map_data)
         self.parse_match_data(match_data)
+
     
+    def get_player_data(self, player):
+        print(player)
+        for team in self.teams:
+            print(team.keys())
+            if player in team:
+                return player
+        raise ValueError("Player not in either team")
+
 
     # Return the team index 
-    def get_team(self, player):
+    def get_player_team(self, player):
         for num in range(2):
             if player in self.teams[num]:
                 return num
         raise ValueError("Player not in either team")
         
-
 
     # Initialize variables for map data
     def parse_map_data(self, map_data):
@@ -193,7 +201,7 @@ class Player:
     
     def __init__(self, steam_id, name, match_list):
         self.name = name
-        self.match_list = match_list
+        self.__match_list__ = match_list
         # TODO: GACKY -- This is kind of awkward as I designed this around keys
         # to accessing the player dictionary around names
         # However -- the steamid makes way more sense. Should be an easy change
@@ -203,15 +211,41 @@ class Player:
 
 
     def sum_stats(self):
+        self.player_stats = {}
         self.__handle_bans__()
+        self.__handle_avgs__()
         return 0
+
+    
+    def __handle_avgs__(self):
+        stat_list = ["kills", "deaths", "assists", "mvps", "ping"]
+        avgs = self.__avg_stats__(stat_list)
+        for index in range(len(stat_list)):
+            self.player_stats[stat_list[index]] = avgs[index]
+        print(self.player_stats) 
+
+
+    def __avg_stats__(self, stats):
+        counts = [0] * len(stats)
+        matches = len(self.__match_list__)
+        for match in self.__match_list__:
+            player = match.get_player_data(self.steam_id)
+            index = 0
+            for stat in stats:
+                counts[index] += player[stat]
+                index += 1
+        for index in range(len(counts)):
+            counts[index] /= matches
+        return counts
+
+
 
 
     def __handle_bans__(self):
         # First let's collect all ban matches
         self.ban_stats = {}
         self.__ban_refs__ = []
-        for match in self.match_list:
+        for match in self.__match_list__:
             if match.cheaters > 0:
                 self.__ban_refs__.append(match)
 
