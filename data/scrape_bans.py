@@ -191,6 +191,44 @@ class Match:
         return record
 
 
+class CheatSummary:
+
+    def __init__(self, match):
+            # Normal match data
+            self.match = match
+            # (Annoyingly) confusing dictionary storing the banned steam ids on each
+            # team. Index correspond to teams (0, 1 -> team 1, 2 resp)
+            # In each dictionary, if the dictionary isn't empty (no cheaters)
+            # then the keys are the type of ban ("VAC", "Game", or "Both")
+            # entries are a list of steam ids for the cheaters
+            self.team_cheats = ({}, {}) 
+            for index in range(2):
+                self.__handle_match__(index)
+            print(self.team_cheats)
+
+
+    def __handle_match__(self, index):
+        # For each team, if a player is banned put them in the corresponding dictionary
+        # in the match[teams] dictionary (Index 0 is team 1, index 1 is team 2)
+        # Players are put into smaller dictionaries corresponding to present ban types
+        # (Either the dictionary is empty for no banned players, or w/ cheaters
+        # there's VAC, Game, or Both)
+
+        # Returns number of cheaters
+        count = 0
+        for record in self.match.teams[index]:
+            record_data = self.match.teams[index][record]
+            if record_data["banned"] and record_data["banned_after"]:
+                count += 1
+                ban_dict = self.team_cheats[index]
+                ban_type = record_data["ban_type"]
+                # Initialize the list if someone hasn't been banned with this type yet
+                ban_dict.setdefault(ban_type, [])
+                # Then add them (just so that we don't override past entries)
+                ban_dict[ban_type].append(record_data["steam_id"])
+        return count
+
+
 # Class for a player -- collection of player, summary stats, and individual matches
 # name - string of the name of the player of focus
 # match_list - a string of match objects
@@ -240,43 +278,11 @@ class Player:
     def __handle_bans__(self):
         # First let's collect all ban matches
         self.ban_stats = {}
-        self.__ban_comps__ = {}
         self.__ban_refs__ = []
         for match in self.__match_list__:
             if match.cheaters_after > 0:
                 self.__ban_refs__.append(match)
-
-        # Well ... this will be trickier than thought
-        for match in self.__ban_refs__:
-            # Get dictionary for each team data
-            match_ent = {}
-            # Normal match data
-            match_ent["match"] = match
-            # (Annoyingly) confusing dictionary storing the banned steam ids on each
-            # team. Index correspond to teams (0, 1 -> team 1, 2 resp)
-            # In each dictionary, if the dictionary isn't empty (no cheaters)
-            # then the keys are the type of ban ("VAC", "Game", or "Both")
-            # entries are a list of steam ids for the cheaters
-            match_ent["teams"] = ({}, {}) 
-            for index in range(2):
-                self.__handle_match__(match, match_ent, index)
-            print(match_ent["teams"])
-
-
-    def __handle_match__(self, match, dict, index):
-        # For each team, if a player is banned put them in the corresponding dictionary
-        # in the match[teams] dictionary (Index 0 is team 1, index 1 is team 2)
-        # Players are put into smaller dictionaries corresponding to present ban types
-        # (Either the dictionary is empty for no banned players, or w/ cheaters
-        # there's VAC, Game, or Both)
-        for record in match.teams[index]:
-            record_data = match.teams[index][record]
-            if record_data["banned"] and record_data["banned_after"]:
-                ban_dict = dict["teams"][index]
-                ban_type = record_data["ban_type"]
-                # Initialize the list if someone hasn't been banned with this type yet
-                ban_dict.setdefault(ban_type, [])
-                # Then add them (just so that we don't override past entries)
-                ban_dict[ban_type].append(record_data["steam_id"])
+                
+        self.__ban_comps__ = [CheatSummary(match) for match in self.__ban_refs__]
 
 main()
