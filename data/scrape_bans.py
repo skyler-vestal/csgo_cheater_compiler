@@ -87,11 +87,9 @@ class Match:
 
     
     def get_player_data(self, player):
-        print(player)
         for team in self.teams:
-            print(team.keys())
             if player in team:
-                return player
+                return team[player]
         raise ValueError("Player not in either team")
 
 
@@ -119,8 +117,8 @@ class Match:
         self.teams = ({}, {})
         self.cheaters = 0
         self.cheaters_after = 0
-        self.__fill_teams__(0, match_rows[1:5])
-        self.__fill_teams__(1, match_rows[7:11])
+        self.__fill_teams__(0, match_rows[1:6])
+        self.__fill_teams__(1, match_rows[7:12])
         score_list = match_rows[6].text.strip().split(":")
         self.scores = (int(score_list[0]), int(score_list[1]))
 
@@ -222,7 +220,7 @@ class Player:
         avgs = self.__avg_stats__(stat_list)
         for index in range(len(stat_list)):
             self.player_stats[stat_list[index]] = avgs[index]
-        print(self.player_stats) 
+        print(self.name, self.player_stats) 
 
 
     def __avg_stats__(self, stats):
@@ -237,8 +235,6 @@ class Player:
         for index in range(len(counts)):
             counts[index] /= matches
         return counts
-
-
 
 
     def __handle_bans__(self):
